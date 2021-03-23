@@ -3,7 +3,7 @@ library(reshape2)
 library(seewave)
 library(phonTools)
 library(zoo)
-filenames = "/home/george/OpenFOAM/george-v1912/run/R14NA_MESH4/postProcessing/surfaceElevation/0/surfaceElevation.dat"
+filenames = "/home/george/OpenFOAM/george-v1912/run/R14NA_MESH11/postProcessing/surfaceElevation/0/surfaceElevation.dat"
 Meas = read.table(filenames[1],header = TRUE)
 gauge_pos <- Meas[c(1,2,3),]
 Meas <- Meas[-c(1,2,3,4),]
@@ -96,7 +96,7 @@ b$Time2 <- b$Time + 16
 ggplot() + geom_line(data=a,aes(x=Time, y=WG6, color="Experimental")) + geom_line(data=b,aes(x=Time2, y=gauge_38, color="Numerical")) + 
   ggtitle("WG6-Gauge39 (33.38 m.)") +  scale_color_manual(values = c('Experimental' = 'red','Numerical' = 'black')) + xlim(40,80)
 
-filenames = "/home/george/OpenFOAM/george-v1912/run/R14NA_MESH4/postProcessing/overtopping/0/overtopping.dat"
+filenames = "/home/george/OpenFOAM/george-v1912/run/R14NA_MESH12/postProcessing/overtopping/0/overtopping.dat"
 tx  <- readLines(filenames)
 tx2  <- gsub(pattern = '\\(', replace = " ", x = tx)
 tx3  <- gsub(pattern = '\\)', replace = " ", x = tx2)

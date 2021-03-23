@@ -2,7 +2,7 @@ library(ggplot2)
 library(reshape2)
 library(seewave)
 library(ggpubr)
-filenames = "/home/george/OpenFOAM/george-v1912/run/R14NA_MESH1/waveGauges.dat"
+filenames = "/home/george/OpenFOAM/george-v1912/run/OCW3D/OCW3D_7/waveGauges.dat"
 Meas = read.table(filenames[1],header=TRUE, skip = 8)
 names(Meas)[1] <- "Time"
 names(Meas)[2] <- "WG1"
@@ -12,15 +12,11 @@ names(Meas)[5] <- "WG4"
 names(Meas)[6] <- "WG5"
 names(Meas)[7] <- "WG6"
 
-filenames = "/home/george/OpenFOAM/george-v1912/run/R16NA_OCW3D2/waveGauges.dat"
-Meas2 = read.table(filenames[1],header=TRUE, skip = 8)
-names(Meas2)[1] <- "Time"
-names(Meas2)[2] <- "WG1"
-names(Meas2)[3] <- "WG2"
-names(Meas2)[4] <- "WG3"
-names(Meas2)[5] <- "WG4"
-names(Meas2)[6] <- "WG5"
-names(Meas2)[7] <- "WG6"
+filenames = Sys.glob("/home/george/OpenFOAM/george-v1912/run/OCW3D/OCW3D_1/fort.*")
+Meas2 = read.table(filenames[400],header=FALSE)
+colnames(Meas2) <- c("X","Y","WL","R2")
+
+ggplot(data = Meas2) + geom_line(aes(x=X, y=WL))
 
 #longmeas <- melt(Meas, id.vars="Time")
 #ggplot(longmeas, aes(Time,value, col=variable)) + geom_line()
