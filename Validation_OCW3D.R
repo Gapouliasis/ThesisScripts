@@ -13,7 +13,7 @@ names(Meas)[6] <- "WG5"
 names(Meas)[7] <- "WG6"
 
 filenames = Sys.glob("/home/george/OpenFOAM/george-v1912/run/OCW3D/OCW3D_1/fort.*")
-Meas2 = read.table(filenames[400],header=FALSE)
+Meas2 = read.table(filenames[200],header=FALSE)
 colnames(Meas2) <- c("X","Y","WL","R2")
 
 ggplot(data = Meas2) + geom_line(aes(x=X, y=WL))

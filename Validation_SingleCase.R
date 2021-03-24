@@ -3,7 +3,7 @@ library(reshape2)
 library(seewave)
 library(phonTools)
 library(zoo)
-filenames = "/home/george/OpenFOAM/george-v1912/run/R14NA_MESH11/postProcessing/surfaceElevation/0/surfaceElevation.dat"
+filenames = "/home/george/OpenFOAM/george-v1912/run/R14NA_MESH12_3/postProcessing/surfaceElevation/0/surfaceElevation.dat"
 Meas = read.table(filenames[1],header = TRUE)
 gauge_pos <- Meas[c(1,2,3),]
 Meas <- Meas[-c(1,2,3,4),]
@@ -87,6 +87,24 @@ b <- Meas[1:round(limit)/20, ]
 
 b$Time2 <- b$Time + 16
 
+var <- Meas$gauge_38
+Pscaled <- Mod(4*fft(var)/length(var))
+Fr <- 0:(length(var)-1)/length(var)
+temp <- as.data.frame(Pscaled)
+temp$Fr <- Fr
+spectra <- temp[-1,]
+
+var <- BenchCalib$WG6
+Pscaled <- Mod(4*fft(var)/length(var))
+Fr <- 0:(length(var)-1)/length(var)
+temp <- as.data.frame(Pscaled)
+temp$Fr <- Fr
+spectra_exp <- temp[-1,]
+
+ggplot() + geom_line(data = spectra, aes(x=Fr, y=Pscaled, color = "Numerical")) +  
+  geom_line(data = spectra_exp, aes(x=Fr, y=Pscaled, color = "Experimental")) + xlim(0.0,0.5) +
+  scale_color_manual(values = c('Experimental' = 'red','Numerical' = 'black')) 
+  
 # Meas_OCW$Time <- Meas_OCW$Time + 20.5
 # Meas_1$Time <- Meas_1$Time + 19.5
 # ggplot() + geom_line(data=a,aes(x=Time, y=WG2, color="Measured")) + geom_line(data=Meas_OCW,aes(x=Time, y=WG2, color="Mesh 5")) +
@@ -96,7 +114,7 @@ b$Time2 <- b$Time + 16
 ggplot() + geom_line(data=a,aes(x=Time, y=WG6, color="Experimental")) + geom_line(data=b,aes(x=Time2, y=gauge_38, color="Numerical")) + 
   ggtitle("WG6-Gauge39 (33.38 m.)") +  scale_color_manual(values = c('Experimental' = 'red','Numerical' = 'black')) + xlim(40,80)
 
-filenames = "/home/george/OpenFOAM/george-v1912/run/R14NA_MESH12/postProcessing/overtopping/0/overtopping.dat"
+filenames = "/home/george/OpenFOAM/george-v1912/run/R14NA_MESH12_3/postProcessing/overtopping/0/overtopping.dat"
 tx  <- readLines(filenames)
 tx2  <- gsub(pattern = '\\(', replace = " ", x = tx)
 tx3  <- gsub(pattern = '\\)', replace = " ", x = tx2)
