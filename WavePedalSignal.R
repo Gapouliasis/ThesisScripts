@@ -2,10 +2,10 @@
 library(ggplot2)
 library(seewave)
 library(reshape2)
-require(signal)
+library(signal)
 #Load and calibrate the wave pedal data----------------------------------------------------------------------------------------------
 filenames = Sys.glob("/home/george/Thesis/tsosMi/Shape 1/*FP*.ASC")
-filename <- filenames[4]
+filename <- filenames[26]
 # filename <- filenames[26]
 Meas = read.table(filename,header=TRUE, sep = ";",skip = 6)
 print(filename)
@@ -14,7 +14,7 @@ wavepedal <-Meas[,c(1,10)]
 rm(Meas)
 colnames(wavepedal) <- c("Time","Pedal")
 wavepedal$Pedal <- wavepedal$Pedal*10.16/100
-
+wavepedal$Pedal <- wavepedal$Pedal - mean(wavepedal[1:5000,2])
 #Filter data and calculate pedal velocity--------------------------------------------------------------------------------------------
 temp <- bwfilter(wavepedal$Pedal, 2000, n =2, to = 2) #Apply Butterworth low pass filter
 wavepedal$FPedal1 <- temp
@@ -45,10 +45,10 @@ temp <- sgolayfilt(wavepedal$Pedal) #Apply Savitzky-Golay smoothing filter
 wavepedal$FPedal3 <- temp
 
 #temp <- diff(temp, lag =1)/0.0005
-temp2 <- temp[5:nrow(temp)]
-temp1 <- temp[4:(nrow(temp)-1)]
-tempb1 <- temp[2:(nrow(temp)-3)]
-tempb2 <- temp[1:(nrow(temp)-4)]
+temp2 <- temp[5:length(temp)]
+temp1 <- temp[4:(length(temp)-1)]
+tempb1 <- temp[2:(length(temp)-3)]
+tempb2 <- temp[1:(length(temp)-4)]
 temp <- (-temp2 + 8*temp1 - 8*tempb1 + tempb2)/(12*0.0005) #Fourth order central difference
 pedalflux$FPedal3 <- temp
 
@@ -63,8 +63,13 @@ temp <- (-temp2 + 8*temp1 - 8*tempb1 + tempb2)/(12*0.0005) #Fourth order central
 pedalflux$Pedal <- temp
 
 #Plot the raw and filtered data
-longmeas <- melt(wavepedal[,], id.vars="Time")
-#ggplot(longmeas, aes(Time,value, col=variable)) + geom_line()
+# longmeas <- melt(wavepedal[,], id.vars="Time")
+# ggplot(longmeas, aes(Time,value, col=variable)) + geom_line()
+ggplot(data = wavepedal) + geom_line(aes(x = Time, y = Pedal, color = "Experimental")) + 
+  geom_line(aes(x = Time, y = FPedal1, color = "Filtered")) + xlim(20,75) + 
+  geom_line(data = pedalflux, aes(x = Time, y = FPedal4, color = "Velocity")) + 
+  scale_color_manual(values = c("Experimental" = "black", "Filtered" = "darkorange1", "Velocity" = "deepskyblue"))
+
 
 #Plot the paddle velocity from the filtered data
 zero <- 30000
@@ -78,9 +83,9 @@ out <- pedalflux[c("Time","FPedal4")]
 equ <- seq(from = 0, to = 100 , by = 0.00005)
 out <- approx(pedalflux$Time,pedalflux$FPedal4, xout = equ)
 
-#Write pedal velocity to file-------------------------------------------------------------------------------------------------------
-write.table(out,file = "/home/george/OpenFOAM/george-v1912/run/R14NA_PaddleSignal_SG2INT.inp",
-            row.names = FALSE, col.names = FALSE)
+# #Write pedal velocity to file-------------------------------------------------------------------------------------------------------
+# write.table(out,file = "/home/george/OpenFOAM/george-v1912/run/R14NA_PaddleSignal_SG2INT.inp",
+#             row.names = FALSE, col.names = FALSE)
 
 #Calculate and plot wave pedal displacement spectra---------------------------------------------------------------------------------
 var <- wavepedal$FPedal1

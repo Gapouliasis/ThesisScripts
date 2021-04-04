@@ -4,8 +4,8 @@ library(reshape2)
 library(seewave)
 library(ggpubr)
 #Read the wave gauge data ----------------------------------------------------------------------------------------------------------
-case_folder <- "OCW3D_11_4INT"
-filenames = file.path("/home/george/OpenFOAM/george-v1912/run/OCW3D",case_folder,"waveGauges.dat")
+case_folder <- "OCW3D_15"
+filenames = file.path("/home/george/OpenFOAM/george-v1912/run/OCW3D/R35",case_folder,"waveGauges.dat")
 # case_folder <- "RUN35NA_MESH11_6"
 # filenames = file.path("/home/george/OpenFOAM/george-v1912/run",case_folder,"waveGauges.dat")
 Meas = read.table(filenames[1],header=TRUE, skip = 8)
@@ -54,7 +54,7 @@ rm(expmeas)
 #Plot experimental and OCW3D data--------------------------------------------------------------------------------------------------
 a <- BenchCalib[1:120000, ]
 
-Meas$Time2 <- Meas$Time + 17
+Meas$Time2 <- Meas$Time + 16.5
 # Meas2$Time2 <- Meas2$Time + 17
 # Meas3$Time2 <- Meas3$Time + 17
 
@@ -64,16 +64,16 @@ Meas$Time2 <- Meas$Time + 17
 #   labs(color = 'OCW3D Mesh') + ggtitle("WG1 (17.3 m.)")
 
 plot1 <- ggplot() + geom_line(data = a,aes(x=Time, y=WG1, color = "Measured")) + geom_line(data = Meas,aes(x=Time2, y=WG1, color = "OCW3D")) +
-  scale_color_manual(values = c('Measured' = 'red','OCW3D' = 'black')) + labs(color = 'OCW3D Mesh') + ggtitle("WG1 (3.35 m.)")
+  scale_color_manual(values = c('Measured' = 'red','OCW3D' = 'black')) + labs(color = 'OCW3D Mesh') + ggtitle("WG1 (3.35 m.)") + xlim(25,60)
 
 plot2 <- ggplot() + geom_line(data = a,aes(x=Time, y=WG2, color = "Measured")) + geom_line(data = Meas,aes(x=Time2, y=WG2, color = "OCW3D")) +
-  scale_color_manual(values = c('Measured' = 'red','OCW3D' = 'black')) + labs(color = 'OCW3D Mesh') + ggtitle("WG2 (16.2 m.)")
+  scale_color_manual(values = c('Measured' = 'red','OCW3D' = 'black')) + labs(color = 'OCW3D Mesh') + ggtitle("WG2 (16.2 m.)") + xlim(25,60)
 
 plot3 <- ggplot() + geom_line(data = a,aes(x=Time, y=WG3, color = "Measured")) + geom_line(data = Meas,aes(x=Time2, y=WG3, color = "OCW3D")) +
-  scale_color_manual(values = c('Measured' = 'red','OCW3D' = 'black')) + labs(color = 'OCW3D Mesh') + ggtitle("WG3 (16.9 m.)")
+  scale_color_manual(values = c('Measured' = 'red','OCW3D' = 'black')) + labs(color = 'OCW3D Mesh') + ggtitle("WG3 (16.9 m.)") + xlim(25,60)
 
 plot4 <- ggplot() + geom_line(data = a,aes(x=Time, y=WG4, color = "Measured")) + geom_line(data = Meas,aes(x=Time2, y=WG4, color = "OCW3D")) +
-  scale_color_manual(values = c('Measured' = 'red','OCW3D' = 'black')) + labs(color = 'OCW3D Mesh') + ggtitle("WG1 (17.3 m.)")
+  scale_color_manual(values = c('Measured' = 'red','OCW3D' = 'black')) + labs(color = 'OCW3D Mesh') + ggtitle("WG1 (17.3 m.)") + xlim(25,60)
 
 figure <- ggarrange(plot1, plot2, plot3, plot4, ncol = 2 , nrow = 2)
 
