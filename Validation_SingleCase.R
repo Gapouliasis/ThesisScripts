@@ -1,49 +1,31 @@
+#Load libraries---------------------------------------------------------------------------------------------------------------------
 library(ggplot2)
 library(reshape2)
 library(seewave)
 library(phonTools)
 library(zoo)
-filenames = "/home/george/OpenFOAM/george-v1912/run/R14NA_MESH12_3/postProcessing/surfaceElevation/0/surfaceElevation.dat"
+#Load user defined functions---------------------------------------------------------------------------------------------------------
+cwd <- getwd()
+source(file.path(cwd,"calc_overtopping.R"))
+#Load data--------------------------------------------------------------------------------------------------------------------------
+case_folder <- "R35NA_MESH14_2"
+bench_case <- "20200902_S1_WG_R35NA.ASC"
+# case_folder <- "R14NA_MESH11_4"
+# bench_case <- "20200825_S1_WG_R14NA.ASC"
+#Load OpenFoam data
+filenames = file.path("/home/george/OpenFOAM/george-v1912/run",case_folder,"postProcessing/surfaceElevation/0/surfaceElevation.dat")
 Meas = read.table(filenames[1],header = TRUE)
 gauge_pos <- Meas[c(1,2,3),]
 Meas <- Meas[-c(1,2,3,4),]
 rownames(Meas) <- NULL
 
-# filenames = "/home/george/OpenFOAM/george-v1912/run/R17NA_MESH9/postProcessing/surfaceElevation/0/surfaceElevation.dat"
-# Meas1 = read.table(filenames[1],header=TRUE)
-# gauge_pos <- Meas1[c(1,2,3),]
-# Meas1 <- Meas1[-c(1,2,3,4),]
-# rownames(Meas1) <- NULL
-# filenames = "/home/george/OpenFOAM/george-v1912/run/R17NA_MESH8/waveGauges.dat"
-# Meas_OCW = read.table(filenames[1],header=TRUE, skip = 8)
-# names(Meas_OCW)[1] <- "Time"
-# names(Meas_OCW)[2] <- "WG1"
-# names(Meas_OCW)[3] <- "WG2"
-# names(Meas_OCW)[4] <- "WG3"
-# names(Meas_OCW)[5] <- "WG4"
-# names(Meas_OCW)[6] <- "WG5"
-# names(Meas_OCW)[7] <- "WG6"
-# 
-# filenames = "/home/george/OpenFOAM/george-v1912/run/R17NA_MESH10/waveGauges.dat"
-# Meas_1 = read.table(filenames[1],header=TRUE, skip = 8)
-# names(Meas_1)[1] <- "Time"
-# names(Meas_1)[2] <- "WG1"
-# names(Meas_1)[3] <- "WG2"
-# names(Meas_1)[4] <- "WG3"
-# names(Meas_1)[5] <- "WG4"
-# names(Meas_1)[6] <- "WG5"
-# names(Meas_1)[7] <- "WG6"
+#Load OceanWaves3D data
+filenames = file.path("/home/george/OpenFOAM/george-v1912/run",case_folder,"waveGauges.dat")
+Meas_OCW = read.table(filenames[1],header=TRUE, skip = 8)
+colnames(Meas_OCW) <- c("Time","WG1","WG2","WG3","WG4","WG5","WG6")
 
-#longmeas <- melt(Meas, id.vars="Time")
-#ggplot(longmeas, aes(Time,value, col=variable)) + geom_line()
-   
-#ggplot(longmeas, aes(Time,value)) + geom_line() + facet_wrap(~variable)
-  
-#rm(longmeas)
-
-vars <- colnames(Meas)
-
-benchfile = "/home/george/Thesis/tsosMi/Shape 1/20200825_S1_WG_R14NA.ASC"
+#Load and calibrate experimental data
+benchfile = file.path("/home/george/Thesis/tsosMi/Shape 1", bench_case)
 BenchRaw = read.table(benchfile,header = TRUE, sep = ";", skip = 6)
 expmeas <-BenchRaw[,c(1,2,3,4,5,6,7,10)]
 rm(BenchRaw)
@@ -56,13 +38,7 @@ wgun <- as.matrix(wgun)
 temp <- wgun%*%diag(calibration)
 temp <- as.data.frame(temp)
 BenchCalib <- temp
-names(BenchCalib)[1] <- "WG1"
-names(BenchCalib)[2] <- "WG2"
-names(BenchCalib)[3] <- "WG3"
-names(BenchCalib)[4] <- "WG4"
-names(BenchCalib)[5] <- "WG5"
-names(BenchCalib)[6] <- "WG6"
-names(BenchCalib)[7] <- "WG10"
+colnames(BenchCalib) <- c("WG1","WG2","WG3","WG4","WG5","WG6","WG10")
 
 mu <- colMeans(BenchCalib[1:5000, ])
 BenchCalib$WG1 <- BenchCalib$WG1 - mu[1]
@@ -77,89 +53,142 @@ BenchCalib <- BenchCalib/100
 BenchCalib$Time <- expmeas[,c(1)] 
 rm(expmeas)
 
-#longbench <- melt(BenchCalib[1:1000000,], id.vars="Time")
-#ggplot(longbench, aes(Time,value, col=variable)) + geom_line() 
-  
-#ggplot(longbench, aes(Time,value)) + geom_line() + facet_wrap(~variable)
+#Plot experimental and numerical Water Elevations-----------------------------------------------------------------------------------
 limit = 150000
 a <- BenchCalib[1:limit, ]
 b <- Meas[1:round(limit)/20, ]
 
-b$Time2 <- b$Time + 16
+b$Time2 <- b$Time + 16.3
 
+Meas_OCW$Time2 <- Meas_OCW$Time + 16.55
+# Meas_1$Time <- Meas_1$Time + 19.5
+ggplot() + geom_line(data=a,aes(x=Time, y=WG2, color="Experimental")) + geom_line(data=Meas_OCW,aes(x=Time2, y=WG5, color="Numerical (OCW3D)")) +
+  ggtitle(sprintf("WG5 (17.6 m.) %s", case_folder), case_folder) + xlim(25,60) + 
+  scale_color_manual(values = c('Experimental' = 'black','Numerical (OCW3D)' = 'red')) + labs(color = 'Legend')
+
+ggplot() + geom_line(data=a,aes(x=Time, y=WG6, color="Experimental")) + geom_line(data=b,aes(x=Time2, y=gauge_38, color="Numerical (OF)")) + 
+  ggtitle(sprintf("WG6-Gauge39 (33.38 m.) %s", case_folder)) +  
+  scale_color_manual(values = c('Experimental' = 'black','Numerical (OF)' = 'red')) + xlim(40,80)
+
+#OpenFoam spectra in the foot of the breakwater----------------------------------------------------------------------------------
 var <- Meas$gauge_38
 Pscaled <- Mod(4*fft(var)/length(var))
 Fr <- 0:(length(var)-1)/length(var)
 temp <- as.data.frame(Pscaled)
-temp$Fr <- Fr
-spectra <- temp[-1,]
-
+temp$T <- 0.01/Fr
+temp$Fr <- Fr*100
+temp <- temp[-1,]
+colnames(temp) <- c("Pscaled","T","Fr")
+spectra_num <- temp
 var <- BenchCalib$WG6
 Pscaled <- Mod(4*fft(var)/length(var))
 Fr <- 0:(length(var)-1)/length(var)
 temp <- as.data.frame(Pscaled)
-temp$Fr <- Fr
-spectra_exp <- temp[-1,]
+temp$T <- 0.0005/Fr
+temp$Fr <- Fr*2000
+temp <- temp[-1,]
+colnames(temp) <- c("Pscaled","T","Fr")
+spectra_exp <- temp
 
-ggplot() + geom_line(data = spectra, aes(x=Fr, y=Pscaled, color = "Numerical")) +  
-  geom_line(data = spectra_exp, aes(x=Fr, y=Pscaled, color = "Experimental")) + xlim(0.0,0.5) +
-  scale_color_manual(values = c('Experimental' = 'red','Numerical' = 'black')) 
-  
-# Meas_OCW$Time <- Meas_OCW$Time + 20.5
-# Meas_1$Time <- Meas_1$Time + 19.5
-# ggplot() + geom_line(data=a,aes(x=Time, y=WG2, color="Measured")) + geom_line(data=Meas_OCW,aes(x=Time, y=WG2, color="Mesh 5")) +
-#   ggtitle("WG2 (16.2 m.)") + geom_line(data=Meas_1,aes(x=Time, y=WG2, color="Mesh 10")) + 
-#   scale_color_manual(values = c('Measured' = 'red','Mesh 5' = 'black', 'Mesh 10' = 'blue')) + labs(color = 'Legend')
+ggplot() + geom_line(data = spectra_exp, aes(x=T, y=Pscaled, color = "Experimental")) + 
+  geom_line(data = spectra_num, aes(x=T, y=Pscaled, color = "Numerical (OF)")) + labs(x = "T (sec.)", y = "Pscaled") + 
+  scale_color_manual(values = c('Numerical (OF)' = 'red','Experimental' = 'black')) + labs(color = 'Legend') + 
+  xlim(0,5) + ggtitle(sprintf("Water Elevation Spectrum vs Wave Period (33.33 m.) %s", case_folder))
 
-ggplot() + geom_line(data=a,aes(x=Time, y=WG6, color="Experimental")) + geom_line(data=b,aes(x=Time2, y=gauge_38, color="Numerical")) + 
-  ggtitle("WG6-Gauge39 (33.38 m.)") +  scale_color_manual(values = c('Experimental' = 'red','Numerical' = 'black')) + xlim(40,80)
+ggplot() + geom_line(data = spectra_exp, aes(x=Fr, y=Pscaled, color = "Experimental")) + 
+  geom_line(data = spectra_num, aes(x=Fr, y=Pscaled, color = "Numerical (OF)")) + labs(x = "Fr (Hz)", y = "Pscaled") + 
+  scale_color_manual(values = c('Numerical (OF)' = 'red','Experimental' = 'black')) + labs(color = 'Legend') + 
+  xlim(0,3) + ggtitle(sprintf("Water Elevation Spectrum vs Frequency (33.33 m.) %s", case_folder))
 
-filenames = "/home/george/OpenFOAM/george-v1912/run/R14NA_MESH12_3/postProcessing/overtopping/0/overtopping.dat"
+#OCW3D spectra in the middle of the flume---------------------------------------------------------------------------------------- 
+equ_time <- seq(from = 1, to = 70 , by = 0.001)
+trans_OCW <- as.data.frame(approx(Meas_OCW$Time,Meas_OCW$WG5, xout = equ_time)) #Linearly interpolate data in equidistant axis
+
+var <- trans_OCW$y
+Pscaled <- Mod(4*fft(var)/length(var))
+Fr <- 0:(length(var)-1)/length(var)
+temp <- as.data.frame(Pscaled)
+temp$T <- 0.001/Fr
+temp$Fr <- Fr*1000
+temp <- temp[-1,]
+colnames(temp) <- c("Pscaled","T","Fr")
+spectra_num <- temp
+var <- BenchCalib$WG5
+Pscaled <- Mod(4*fft(var)/length(var))
+Fr <- 0:(length(var)-1)/length(var)
+temp <- as.data.frame(Pscaled)
+temp$T <- 0.0005/Fr
+temp$Fr <- Fr*2000
+temp <- temp[-1,]
+colnames(temp) <- c("Pscaled","T","Fr")
+spectra_exp <- temp
+
+ggplot() + geom_line(data = spectra_exp, aes(x=T, y=Pscaled, color = "Experimental")) + 
+  geom_line(data = spectra_num, aes(x=T, y=Pscaled, color = "Numerical (OCW3D)")) + labs(x = "T (sec.)", y = "Pscaled") + 
+  scale_color_manual(values = c('Numerical (OCW3D)' = 'red','Experimental' = 'black')) + labs(color = 'Legend') + 
+  xlim(0,5) + ggtitle(sprintf("Water Elevation Spectrum vs Wave Period (17.6 m.) %s", case_folder))
+
+ggplot() + geom_line(data = spectra_exp, aes(x=Fr, y=Pscaled, color = "Experimental")) + 
+  geom_line(data = spectra_num, aes(x=Fr, y=Pscaled, color = "Numerical (OCW3D)")) + labs(x = "Fr (Hz)", y = "Pscaled") + 
+  scale_color_manual(values = c('Numerical (OCW3D)' = 'red','Experimental' = 'black')) + labs(color = 'Legend') + 
+  xlim(0,3) + ggtitle(sprintf("Water Elevation Spectrum vs Frequency (17.6 m.) %s", case_folder))
+
+#Compare the experimental and numerical overtopping volumes----------------------------------------------------------------------
+#Load the OpenFoam data 
+filenames =  file.path("/home/george/OpenFOAM/george-v1912/run",case_folder,"postProcessing/overtopping/0/overtopping.dat")
 tx  <- readLines(filenames)
 tx2  <- gsub(pattern = '\\(', replace = " ", x = tx)
 tx3  <- gsub(pattern = '\\)', replace = " ", x = tx2)
 writeLines(tx3, con=filenames)
 QMeas = read.table(filenames[1],header=FALSE, skip = 1)
 colnames(QMeas) <- c("Time","Qx","Qy","Qz")
-
-temp <- QMeas[,c(2,3)]**2
-temp <- apply(temp, MARGIN = 1, sum)
-temp <- sqrt(temp)/0.8
+#Transform the instantaneous overtopping discharge to cumulative overtopping volume 
+temp <- QMeas[,c(2,3)]
+# temp <- QMeas[,c(2,3)]**2
+# temp <- apply(temp, MARGIN = 1, sum)
+# temp <- sqrt(temp)/0.8
 steps <- diff(QMeas$Time, lag = 1)
-temp <- cumsum(temp[2:length(temp)]*steps)
-Vnum <- data.frame(temp)
+temp1 <- temp[1:(nrow(temp)-1),1]
+temp2 <- temp[2:nrow(temp),1]
+temp <- cumsum(0.5*(temp1 + temp2)*steps)
+Vnum <- data.frame(temp)/0.8
+#Vnum <- data.frame(apply(temp, MARGIN = 1, sum))/0.8
 colnames(Vnum) <- "V"
 Vnum$Time <- QMeas[2:nrow(QMeas),1] + 16
-benchfile = "/home/george/Thesis/tsosMi/Shape 1/20200825_S1_WG_R14NA.ASC"
+
+#Load the experimental wave gauge data in the overtopping box 
+benchfile = file.path("/home/george/Thesis/tsosMi/Shape 1", bench_case)
 BenchRaw = read.table(benchfile,header = TRUE, sep = ";", skip = 6)
 Signal <- BenchRaw[,c(10)]
-box_type = 2
+#Transform the water level to cumulative overtopping volume
+box_type = 3
 
-if (box_type==2) {
-  mouth = 0.28 
-} else if (box_type==3) {
-  mouth = 0.112}
-
-#Calibration function of WG9 
-cald = - 4.38/100
-
-#Calculate water depth in box
-d = 4.4/100 + (Signal - 9.86172602739726) * cald
-
-#Apply equations for different  water depths
-f1 = which(d<0.47)
-f2 = which(d>=0.47 & d<0.48)
-f3 = which(d>=0.48)
-v = zeros(length(d),1)
-v[f1] = 0.216*0.128*d[f1]
-v[f2] = 0.296*0.128*(d[f2]-0.47)+0.47*0.216*0.128
-v[f3] = 0.47*0.216*0.128+0.01*0.296*0.128+(0.19097*(d[f3]-0.48)^2+(d[f3]-0.48)*0.52)*0.28
-v=v-mean(v[1:2000])
-q=v/mouth
-
-V <- data.frame(BenchRaw$Measurement.time.s.)
-names(V)[1] <- "Time"
-V$V <- q #Cumulative overtopping volume, in m^3/m
+V <- calc_overtopping(Signal,box_type)
+# if (box_type==2) {
+#   mouth = 0.28 
+# } else if (box_type==3) {
+#   mouth = 0.112}
+# 
+# #Calibration function of WG9 
+# cald = - 4.38/100
+# 
+# #Calculate water depth in box
+# d = 4.4/100 + (Signal - 9.86172602739726) * cald
+# 
+# #Apply equations for different  water depths
+# f1 = which(d<0.47)
+# f2 = which(d>=0.47 & d<0.48)
+# f3 = which(d>=0.48)
+# v = zeros(length(d),1)
+# v[f1] = 0.216*0.128*d[f1]
+# v[f2] = 0.296*0.128*(d[f2]-0.47)+0.47*0.216*0.128
+# v[f3] = 0.47*0.216*0.128+0.01*0.296*0.128+(0.19097*(d[f3]-0.48)^2+(d[f3]-0.48)*0.52)*0.28
+# v=v-mean(v[1:2000])
+# q=v/mouth
+# 
+# V <- data.frame(BenchRaw$Measurement.time.s.)
+# names(V)[1] <- "Time"
+# V$V <- q #Cumulative overtopping volume, in m^3/m
 
 #Calculate the measurement time step
 step = V$Time[2] - V$Time[1] 
@@ -169,18 +198,9 @@ der <- data.frame(diff(Vm$V, lag =1)/step)
 der$Time <- Vm[2:nrow(Vm),1] 
 names(der)[1]<- "der"
 ggplot() + geom_line( data = Vmm, aes(x=Time, y=V, color = "Experimental")) + geom_line(data = Vnum, aes(x=Time, y=V, color = "Numerical")) +
-  scale_color_manual(values = c('Numerical' = 'black','Experimental' = 'red')) + ggtitle("Cumulative Overtopping")
-# a <- BenchCalib[80001:limit, ]
-# b <- Meas[1700:nrow(Meas), ]
-# exp_spec <- meanspec(a, f = 2000, wl = 1024, PSD = TRUE, plot = FALSE, FUN = "mean")
-# spectra <- as.data.frame(exp_spec)
-# names(spectra)[2] <- "Exp"
-# num_spec <- meanspec(b$gauge_38, f = 100, wl = 1024, PSD = TRUE, plot = FALSE, FUN = "mean")
-# temp <- as.data.frame(num_spec)
-# spectra$Num <- temp$y
-# 
-# longmeas <- melt(spectra, id.vars="x")
-# ggplot(longmeas, aes(x,value, col=variable)) + geom_line()
+  scale_color_manual(values = c('Numerical' = 'black','Experimental' = 'red')) + 
+  ggtitle(sprintf("Cumulative Overtopping %s", case_folder))
+
 
 
                         
