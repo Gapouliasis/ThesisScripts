@@ -4,8 +4,8 @@ library(seewave)
 library(reshape2)
 library(signal)
 #Load and calibrate the wave pedal data----------------------------------------------------------------------------------------------
-filenames = Sys.glob("/home/george/Thesis/tsosMi/Shape 1/*FP*.ASC")
-filename <- filenames[26]
+filenames = Sys.glob("/home/george/Thesis/tsosMi/Shape 1/*FP*NA.ASC")
+filename <- filenames[10]
 # filename <- filenames[26]
 Meas = read.table(filename,header=TRUE, sep = ";",skip = 6)
 print(filename)
