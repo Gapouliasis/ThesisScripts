@@ -8,8 +8,8 @@ library(zoo)
 cwd <- getwd()
 source(file.path(cwd,"calc_overtopping.R"))
 #Load data--------------------------------------------------------------------------------------------------------------------------
-case_folder <- "R35NA_MESH14_2"
-bench_case <- "20200902_S1_WG_R35NA.ASC"
+case_folder <- "R24NA_MESH15_ThC010"
+bench_case <- "20200825_S1_WG_R24NA.ASC"
 # case_folder <- "R14NA_MESH11_4"
 # bench_case <- "20200825_S1_WG_R14NA.ASC"
 #Load OpenFoam data
@@ -58,20 +58,20 @@ limit = 150000
 a <- BenchCalib[1:limit, ]
 b <- Meas[1:round(limit)/20, ]
 
-b$Time2 <- b$Time + 16.3
+b$Time2 <- b$Time + 16.5
 
-Meas_OCW$Time2 <- Meas_OCW$Time + 16.55
+Meas_OCW$Time2 <- Meas_OCW$Time + 16.4
 # Meas_1$Time <- Meas_1$Time + 19.5
-ggplot() + geom_line(data=a,aes(x=Time, y=WG2, color="Experimental")) + geom_line(data=Meas_OCW,aes(x=Time2, y=WG5, color="Numerical (OCW3D)")) +
-  ggtitle(sprintf("WG5 (17.6 m.) %s", case_folder), case_folder) + xlim(25,60) + 
+ggplot() + geom_line(data=a,aes(x=Time, y=WG5, color="Experimental")) + geom_line(data=Meas_OCW,aes(x=Time2, y=WG5, color="Numerical (OCW3D)")) +
+  ggtitle(sprintf("WG5 (17.6 m.) %s", case_folder), case_folder) + xlim(25,70) + 
   scale_color_manual(values = c('Experimental' = 'black','Numerical (OCW3D)' = 'red')) + labs(color = 'Legend')
 
-ggplot() + geom_line(data=a,aes(x=Time, y=WG6, color="Experimental")) + geom_line(data=b,aes(x=Time2, y=gauge_38, color="Numerical (OF)")) + 
+ggplot() + geom_line(data=a,aes(x=Time, y=WG6, color="Experimental")) + geom_line(data=b,aes(x=Time2, y=gauge_48, color="Numerical (OF)")) + 
   ggtitle(sprintf("WG6-Gauge39 (33.38 m.) %s", case_folder)) +  
   scale_color_manual(values = c('Experimental' = 'black','Numerical (OF)' = 'red')) + xlim(40,80)
 
 #OpenFoam spectra in the foot of the breakwater----------------------------------------------------------------------------------
-var <- Meas$gauge_38
+var <- Meas$gauge_48
 Pscaled <- Mod(4*fft(var)/length(var))
 Fr <- 0:(length(var)-1)/length(var)
 temp <- as.data.frame(Pscaled)
@@ -90,10 +90,10 @@ temp <- temp[-1,]
 colnames(temp) <- c("Pscaled","T","Fr")
 spectra_exp <- temp
 
-ggplot() + geom_line(data = spectra_exp, aes(x=T, y=Pscaled, color = "Experimental")) + 
-  geom_line(data = spectra_num, aes(x=T, y=Pscaled, color = "Numerical (OF)")) + labs(x = "T (sec.)", y = "Pscaled") + 
-  scale_color_manual(values = c('Numerical (OF)' = 'red','Experimental' = 'black')) + labs(color = 'Legend') + 
-  xlim(0,5) + ggtitle(sprintf("Water Elevation Spectrum vs Wave Period (33.33 m.) %s", case_folder))
+# ggplot() + geom_line(data = spectra_exp, aes(x=T, y=Pscaled, color = "Experimental")) + 
+#   geom_line(data = spectra_num, aes(x=T, y=Pscaled, color = "Numerical (OF)")) + labs(x = "T (sec.)", y = "Pscaled") + 
+#   scale_color_manual(values = c('Numerical (OF)' = 'red','Experimental' = 'black')) + labs(color = 'Legend') + 
+#   xlim(0,5) + ggtitle(sprintf("Water Elevation Spectrum vs Wave Period (33.33 m.) %s", case_folder))
 
 ggplot() + geom_line(data = spectra_exp, aes(x=Fr, y=Pscaled, color = "Experimental")) + 
   geom_line(data = spectra_num, aes(x=Fr, y=Pscaled, color = "Numerical (OF)")) + labs(x = "Fr (Hz)", y = "Pscaled") + 
@@ -123,10 +123,10 @@ temp <- temp[-1,]
 colnames(temp) <- c("Pscaled","T","Fr")
 spectra_exp <- temp
 
-ggplot() + geom_line(data = spectra_exp, aes(x=T, y=Pscaled, color = "Experimental")) + 
-  geom_line(data = spectra_num, aes(x=T, y=Pscaled, color = "Numerical (OCW3D)")) + labs(x = "T (sec.)", y = "Pscaled") + 
-  scale_color_manual(values = c('Numerical (OCW3D)' = 'red','Experimental' = 'black')) + labs(color = 'Legend') + 
-  xlim(0,5) + ggtitle(sprintf("Water Elevation Spectrum vs Wave Period (17.6 m.) %s", case_folder))
+# ggplot() + geom_line(data = spectra_exp, aes(x=T, y=Pscaled, color = "Experimental")) + 
+#   geom_line(data = spectra_num, aes(x=T, y=Pscaled, color = "Numerical (OCW3D)")) + labs(x = "T (sec.)", y = "Pscaled") + 
+#   scale_color_manual(values = c('Numerical (OCW3D)' = 'red','Experimental' = 'black')) + labs(color = 'Legend') + 
+#   xlim(0,5) + ggtitle(sprintf("Water Elevation Spectrum vs Wave Period (17.6 m.) %s", case_folder))
 
 ggplot() + geom_line(data = spectra_exp, aes(x=Fr, y=Pscaled, color = "Experimental")) + 
   geom_line(data = spectra_num, aes(x=Fr, y=Pscaled, color = "Numerical (OCW3D)")) + labs(x = "Fr (Hz)", y = "Pscaled") + 
@@ -151,44 +151,19 @@ steps <- diff(QMeas$Time, lag = 1)
 temp1 <- temp[1:(nrow(temp)-1),1]
 temp2 <- temp[2:nrow(temp),1]
 temp <- cumsum(0.5*(temp1 + temp2)*steps)
-Vnum <- data.frame(temp)/0.8
+Vnum <- data.frame(temp)
 #Vnum <- data.frame(apply(temp, MARGIN = 1, sum))/0.8
 colnames(Vnum) <- "V"
-Vnum$Time <- QMeas[2:nrow(QMeas),1] + 16
+Vnum$Time <- QMeas[2:nrow(QMeas),1] + 35
 
 #Load the experimental wave gauge data in the overtopping box 
 benchfile = file.path("/home/george/Thesis/tsosMi/Shape 1", bench_case)
 BenchRaw = read.table(benchfile,header = TRUE, sep = ";", skip = 6)
 Signal <- BenchRaw[,c(10)]
 #Transform the water level to cumulative overtopping volume
-box_type = 3
+box_type = 2
 
 V <- calc_overtopping(Signal,box_type)
-# if (box_type==2) {
-#   mouth = 0.28 
-# } else if (box_type==3) {
-#   mouth = 0.112}
-# 
-# #Calibration function of WG9 
-# cald = - 4.38/100
-# 
-# #Calculate water depth in box
-# d = 4.4/100 + (Signal - 9.86172602739726) * cald
-# 
-# #Apply equations for different  water depths
-# f1 = which(d<0.47)
-# f2 = which(d>=0.47 & d<0.48)
-# f3 = which(d>=0.48)
-# v = zeros(length(d),1)
-# v[f1] = 0.216*0.128*d[f1]
-# v[f2] = 0.296*0.128*(d[f2]-0.47)+0.47*0.216*0.128
-# v[f3] = 0.47*0.216*0.128+0.01*0.296*0.128+(0.19097*(d[f3]-0.48)^2+(d[f3]-0.48)*0.52)*0.28
-# v=v-mean(v[1:2000])
-# q=v/mouth
-# 
-# V <- data.frame(BenchRaw$Measurement.time.s.)
-# names(V)[1] <- "Time"
-# V$V <- q #Cumulative overtopping volume, in m^3/m
 
 #Calculate the measurement time step
 step = V$Time[2] - V$Time[1] 
@@ -197,9 +172,9 @@ Vmm <- data.frame(rollmedian(V, 1000))
 der <- data.frame(diff(Vm$V, lag =1)/step)
 der$Time <- Vm[2:nrow(Vm),1] 
 names(der)[1]<- "der"
-ggplot() + geom_line( data = Vmm, aes(x=Time, y=V, color = "Experimental")) + geom_line(data = Vnum, aes(x=Time, y=V, color = "Numerical")) +
+ggplot() + geom_line( data = V, aes(x=Time, y=V, color = "Experimental")) + geom_line(data = Vnum, aes(x=Time, y=V, color = "Numerical")) +
   scale_color_manual(values = c('Numerical' = 'black','Experimental' = 'red')) + 
-  ggtitle(sprintf("Cumulative Overtopping %s", case_folder))
+  ggtitle(sprintf("Cumulative Overtopping %s", case_folder)) + ylim(0,0.012)
 
 
 

@@ -15,6 +15,11 @@ rm(Meas)
 colnames(wavepedal) <- c("Time","Pedal")
 wavepedal$Pedal <- wavepedal$Pedal*10.16/100
 wavepedal$Pedal <- wavepedal$Pedal - mean(wavepedal[1:5000,2])
+equ_time <- seq(from = 1, to = 100 , by = 0.01)
+temp_ped <- approx(wavepedal$Time,wavepedal$Pedal, xout = equ_time) #Linearly interpolate data in equidistant axis
+ped <- as.data.frame(temp_ped)
+names(ped)[1] <- "Time"
+names(ped)[2] <- substr(filename,41,55)
 #Filter data and calculate pedal velocity--------------------------------------------------------------------------------------------
 temp <- bwfilter(wavepedal$Pedal, 2000, n =2, to = 2) #Apply Butterworth low pass filter
 wavepedal$FPedal1 <- temp
@@ -44,6 +49,10 @@ for (filename in filenames[2:28]){
   colnames(wavepedal) <- c("Time","Pedal")
   wavepedal$Pedal <- wavepedal$Pedal*10.16/100
   wavepedal$Pedal <- wavepedal$Pedal - mean(wavepedal[1:5000,2])
+  equ_time <- seq(from = 1, to = 100 , by = 0.01)
+  temp_ped <- approx(wavepedal$Time,wavepedal$Pedal, xout = equ_time) #Linearly interpolate data in equidistant axis
+  ped$temp <- temp_ped$y
+  names(ped)[i] <- substr(filename,41,55)
   #Filter data and calculate pedal velocity--------------------------------------------------------------------------------------------
   temp <- bwfilter(wavepedal$Pedal, 2000, n =2, to = 2) #Apply Butterworth low pass filter
   wavepedal$FPedal1 <- temp
@@ -70,5 +79,5 @@ ggplot(longmeas, aes(Time,value, col=variable)) + geom_line() + xlim(20,60)
 
 plot(pedals[,1], pedals[,1])
 
-write.table(out,file = "/home/george/OpenFOAM/george-v1912/run/R24NA_PaddleSignal_FP1inp",
-            row.names = FALSE, col.names = FALSE)
+write.table(ped,file = "/home/george/OpenFOAM/george-v1912/run/PedalSignal_Comparison2.txt",
+            row.names = FALSE, col.names = TRUE)

@@ -74,18 +74,18 @@ ggplot(data = wavepedal) + geom_line(aes(x = Time, y = Pedal, color = "Experimen
 #Plot the paddle velocity from the filtered data
 zero <- 30000
 ggplot() + geom_line(data=pedalflux[zero:160000, ],aes(x=Time,y=FPedal2, color = "Alt")) +
-  geom_line(data=pedalflux[zero:160000, ],aes(x=Time,y=FPedal4, color = "Current"))
+  geom_line(data=pedalflux[zero:160000, ],aes(x=Time,y=FPedal1, color = "Current"))
 pedalflux$Time <- pedalflux$Time - pedalflux$Time[zero]
 pedalflux <- pedalflux[zero:nrow(pedalflux),]
 longmeas <- melt(pedalflux, id.vars="Time")
 #ggplot(longmeas, aes(Time,value, col=variable)) + geom_line()
-out <- pedalflux[c("Time","FPedal4")]
-equ <- seq(from = 0, to = 100 , by = 0.00005)
-out <- approx(pedalflux$Time,pedalflux$FPedal4, xout = equ)
+out <- pedalflux[c("Time","FPedal1")]
+# equ <- seq(from = 0, to = 100 , by = 0.00005)
+# out <- approx(pedalflux$Time,pedalflux$FPedal4, xout = equ)
 
 # #Write pedal velocity to file-------------------------------------------------------------------------------------------------------
-# write.table(out,file = "/home/george/OpenFOAM/george-v1912/run/R14NA_PaddleSignal_SG2INT.inp",
-#             row.names = FALSE, col.names = FALSE)
+write.table(out,file = "/home/george/OpenFOAM/george-v1912/run/R24NA_PaddleSignal_FP1.inp",
+            row.names = FALSE, col.names = FALSE)
 
 #Calculate and plot wave pedal displacement spectra---------------------------------------------------------------------------------
 var <- wavepedal$FPedal1
