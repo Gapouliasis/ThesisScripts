@@ -5,7 +5,7 @@ library(reshape2)
 library(signal)
 #Load and calibrate the wave pedal data----------------------------------------------------------------------------------------------
 filenames = Sys.glob("/home/george/Thesis/tsosMi/Shape 1/*FP*NA.ASC")
-filename <- filenames[10]
+filename <- filenames[16]
 # filename <- filenames[26]
 Meas = read.table(filename,header=TRUE, sep = ";",skip = 6)
 print(filename)
@@ -84,7 +84,7 @@ out <- pedalflux[c("Time","FPedal1")]
 # out <- approx(pedalflux$Time,pedalflux$FPedal4, xout = equ)
 
 # #Write pedal velocity to file-------------------------------------------------------------------------------------------------------
-write.table(out,file = "/home/george/OpenFOAM/george-v1912/run/R24NA_PaddleSignal_FP1.inp",
+write.table(out,file = "/home/george/OpenFOAM/george-v1912/run/R32NA_PaddleSignal_FP1.inp",
             row.names = FALSE, col.names = FALSE)
 
 #Calculate and plot wave pedal displacement spectra---------------------------------------------------------------------------------

@@ -8,8 +8,9 @@ library(ggpubr)
 #Load user defined functions---------------------------------------------------------------------------------------------------------
 cwd <- getwd()
 source(file.path(cwd,"calc_overtopping.R"))
-#Load cases for comparison-----------------------------------------------------------------------------------------------------------
+#Load numerical overtopping data for comparison--------------------------------------------------------------------------------------
 case_folders <- c("R24NA_MESH15_ThC010","R24NA_MESH15_ThC025","R24NA_MESH15_Th","R24NA_MESH15_ThC075","R24NA_MESH15_ThC1")
+i <- 1
 for (case_folder in case_folders){
   filenames = file.path("/home/george/OpenFOAM/george-v1912/run",case_folder,"postProcessing/overtopping/0/overtopping.dat")
   tx  <- readLines(filenames)
@@ -17,15 +18,30 @@ for (case_folder in case_folders){
   tx3  <- gsub(pattern = '\\)', replace = " ", x = tx2)
   writeLines(tx3, con=filenames)
   assign(case_folder,read.table(filenames[1],header=FALSE, skip = 1))
+  i <- i + 1 
 }
 
-vars <- colnames(Meas)
+#Transform the instantaneous overtopping discharge to cumulative overtopping volume 
+i <- 1
+for (case_folder in case_folders){
+  dat <- eval(parse(text = case_folder))
+  temp <- dat[,c(2,3)]
+  steps <- diff(dat$V1, lag = 1)
+  temp1 <- temp[1:(nrow(temp)-1),1]
+  temp2 <- temp[2:nrow(temp),1]
+  V <- cumsum(0.5*(temp1 + temp2)*steps)
+  Time <- dat[2:nrow(dat),1] + 35
+  assign(sprintf("V%i",i), as.data.frame(cbind(V,Time)))
+  i <- i + 1
+}
 
+#Load the experimental wave gauge data---------------------------------------------------------------------------------------------
 benchfile = "/home/george/Thesis/tsosMi/Shape 1/20200825_S1_WG_R24NA.ASC"
 BenchRaw = read.table(benchfile,header = TRUE, sep = ";", skip = 6)
 expmeas <-BenchRaw[,c(1,2,3,4,5,6,7,10)]
 rm(BenchRaw)
 
+#Calibrate the experimental data
 calibfile = "/home/george/Thesis/tsosMi/Calibration.txt"
 calibration = read.table(calibfile,header = FALSE)
 calibration <- as.vector(t(calibration))
@@ -49,83 +65,75 @@ BenchCalib <- BenchCalib/100
 BenchCalib$Time <- expmeas[,c(1)] 
 rm(expmeas)
 
-#Compare the experimental and numerical overtopping volumes----------------------------------------------------------------------
-#Transform the instantaneous overtopping discharge to cumulative overtopping volume 
-temp <- R24NA_MESH15_Th[,c(2,3)]
-steps <- diff(R24NA_MESH15_Th$V1, lag = 1)
-temp1 <- temp[1:(nrow(temp)-1),1]
-temp2 <- temp[2:nrow(temp),1]
-temp <- cumsum(0.5*(temp1 + temp2)*steps)
-V1 <- data.frame(temp)
-#Vnum <- data.frame(apply(temp, MARGIN = 1, sum))/0.8
-colnames(V1) <- "V"
-V1$Time <- R24NA_MESH15_Th[2:nrow(R24NA_MESH15_Th),1] + 35
-
-temp <- R24NA_MESH15_ThC010[,c(2,3)]
-steps <- diff(R24NA_MESH15_ThC010$V1, lag = 1)
-temp1 <- temp[1:(nrow(temp)-1),1]
-temp2 <- temp[2:nrow(temp),1]
-temp <- cumsum(0.5*(temp1 + temp2)*steps)
-V2 <- data.frame(temp)
-#Vnum <- data.frame(apply(temp, MARGIN = 1, sum))/0.8
-colnames(V2) <- "V"
-V2$Time <- R24NA_MESH15_ThC010[2:nrow(R24NA_MESH15_ThC010),1] + 35
-
-temp <- R24NA_MESH15_ThC025[,c(2,3)]
-steps <- diff(R24NA_MESH15_ThC025$V1, lag = 1)
-temp1 <- temp[1:(nrow(temp)-1),1]
-temp2 <- temp[2:nrow(temp),1]
-temp <- cumsum(0.5*(temp1 + temp2)*steps)
-V3 <- data.frame(temp)
-#Vnum <- data.frame(apply(temp, MARGIN = 1, sum))/0.8
-colnames(V3) <- "V"
-V3$Time <- R24NA_MESH15_ThC025[2:nrow(R24NA_MESH15_ThC025),1] + 35
-
-temp <- R24NA_MESH15_ThC075[,c(2,3)]
-steps <- diff(R24NA_MESH15_ThC075$V1, lag = 1)
-temp1 <- temp[1:(nrow(temp)-1),1]
-temp2 <- temp[2:nrow(temp),1]
-temp <- cumsum(0.5*(temp1 + temp2)*steps)
-V4 <- data.frame(temp)
-#Vnum <- data.frame(apply(temp, MARGIN = 1, sum))/0.8
-colnames(V4) <- "V"
-V4$Time <- R24NA_MESH15_ThC075[2:nrow(R24NA_MESH15_ThC075),1] + 35
-
-temp <- R24NA_MESH15_ThC1[,c(2,3)]
-steps <- diff(R24NA_MESH15_ThC1$V1, lag = 1)
-temp1 <- temp[1:(nrow(temp)-1),1]
-temp2 <- temp[2:nrow(temp),1]
-temp <- cumsum(0.5*(temp1 + temp2)*steps)
-V5 <- data.frame(temp)
-#Vnum <- data.frame(apply(temp, MARGIN = 1, sum))/0.8
-colnames(V5) <- "V"
-V5$Time <- R24NA_MESH15_ThC1[2:nrow(R24NA_MESH15_ThC1),1] + 35
-
-#Load the experimental wave gauge data in the overtopping box 
-#benchfile = file.path("/home/george/Thesis/tsosMi/Shape 1", bench_case)
+#Load and transform the water level to cumulative overtopping volume
 BenchRaw = read.table(benchfile,header = TRUE, sep = ";", skip = 6)
 Signal <- BenchRaw[,c(10)]
-#Transform the water level to cumulative overtopping volume
 box_type = 2
-
 V <- calc_overtopping(Signal,box_type)
 
-#Calculate the measurement time step
+#Smooth the raw cumulative signal
 step = V$Time[2] - V$Time[1] 
 Vm <- data.frame(rollmean(V, 1000))
 Vmm <- data.frame(rollmedian(V, 1000))
 der <- data.frame(diff(Vm$V, lag =1)/step)
 der$Time <- Vm[2:nrow(Vm),1] 
 names(der)[1]<- "der"
+
+#Plot the comparison of experimental and numerical overtopping volumes--------------------------------------------------------------
 imark <- floor(seq(from=1,to=dim(V1)[1],length=100))
 ggplot() + geom_line( data = V, aes(x=Time, y=V, color = "Experimental")) + 
   #geom_point(data = V1[imark,], aes(x=Time, y=V, color = "CFL=0.50")) +
-  geom_line(data = V2, aes(x=Time, y=V, color = "CFL=0.10")) + geom_line(data = V3, aes(x=Time, y=V, color = "CFL=0.25")) + 
+  geom_line(data = V2, aes(x=Time, y=V, color = "CFL=0.25")) + geom_line(data = V3, aes(x=Time, y=V, color = "CFL=0.50")) + 
   geom_line(data = V4, aes(x=Time, y=V, color = "CFL=0.75")) + geom_line(data = V5, aes(x=Time, y=V, color = "CFL=1.00")) +
-  geom_line(data = V1, aes(x=Time, y=V, color = "CFL=0.50")) +
+  geom_line(data = V1, aes(x=Time, y=V, color = "CFL=0.10")) +
   scale_color_manual(values = c('CFL=0.10' = 'deeppink','CFL=0.25' = 'darkorchid1','CFL=0.50' = 'red',
                                 'CFL=0.75' = 'darkorange1','CFL=1.00' = 'darkgreen','Experimental' = 'black')) + 
-  ggtitle(sprintf("Cumulative Overtopping %s", case_folder)) + ylim(0,0.012) +xlim(50,100)
+  ggtitle("Cumulative Overtopping Comparison") + ylim(0,0.012) +xlim(50,100)
+
+#Calculate and plot relative error of individual overtopping volume----------------------------------------------------------------
+i <- 1
+for (case_folder in case_folders){
+  temp <- eval(parse(text = case_folder))
+  dat <- temp[,c(1,2)]
+  names(dat)[1] <- "time"
+  names(dat)[2] <- "obs"
+  b <- clust(dat, u = 0.001, tim.cond = 1, clust.max = FALSE)
+  
+  temp_clust <- 0
+  nclust <- length(b)
+  
+  for (j in 1:nclust){
+    temp <- b[[j]][2,]
+    steps <- diff(b[[j]][1,], lag = 1)
+    temp1 <- temp[1:(length(temp)-1)]
+    temp2 <- temp[2:length(temp)]
+    temp <- sum(0.5*(temp1 + temp2)*steps)
+    temp_clust[j] <- temp
+  }
+  
+  if (i == 1){
+    temp <- zeros(23,1)
+    VClust <- data.frame(temp)
+    colnames(VClust) <- "V1"
+  }
+  
+  VClust[sprintf("V%i",i)] <- as.data.frame(temp_clust)
+  i <- i + 1
+}
+
+CFL025<- abs((VClust$V1 - VClust$V2)/VClust$V1)*100
+CFL050 <- abs((VClust$V1 - VClust$V3)/VClust$V1)*100
+CFL075 <- abs((VClust$V1 - VClust$V4)/VClust$V1)*100
+CFL100 <- abs((VClust$V1 - VClust$V5)/VClust$V1)*100
+
+Ver <- as.data.frame(cbind(CFL025,CFL050,CFL075,CFL100)) 
+
+mer <- melt(Ver)
+names(mer)[1] <- "Case"
+
+ggplot(mer, aes(Case,value, fill = Case)) +  geom_boxplot() + geom_jitter(position=position_jitter(0.2)) + 
+  labs(x = "Case", y = "Relative Error %") + ggtitle("Relative Error of individual overtopping volume compared to CFL010")
+#+ scale_fill_brewer(palette="Dark2") 
 
 #Load the wave gauge data---------------------------------------------------------------------------------------------------------
 case_folders <- c("R24NA_MESH15_ThC010","R24NA_MESH15_ThC025","R24NA_MESH15_Th","R24NA_MESH15_ThC075","R24NA_MESH15_ThC1")
@@ -135,9 +143,16 @@ for (case_folder in case_folders){
   tx2  <- gsub(pattern = '\\(', replace = " ", x = tx)
   tx3  <- gsub(pattern = '\\)', replace = " ", x = tx2)
   writeLines(tx3, con=filenames)
-  assign(case_folder,read.table(filenames[1],header=FALSE, skip = 1))
+  assign(case_folder,read.table(filenames[1],header=TRUE))
 }
-                        
+
+R24NA_MESH15_Th <- R24NA_MESH15_Th[-c(1,2,3,4),]    
+R24NA_MESH15_ThC010 <- R24NA_MESH15_ThC010[-c(1,2,3,4),] 
+R24NA_MESH15_ThC025 <- R24NA_MESH15_ThC025[-c(1,2,3,4),] 
+R24NA_MESH15_ThC075 <- R24NA_MESH15_ThC075[-c(1,2,3,4),] 
+R24NA_MESH15_ThC1 <- R24NA_MESH15_ThC1[-c(1,2,3,4),] 
+
+#Calculate experimental and numerical spectra--------------------------------------------------------------------------------------
 var <- BenchCalib$WG6
 Pscaled <- Mod(4*fft(var)/length(var))
 Fr <- 0:(length(var)-1)/length(var)
@@ -148,52 +163,35 @@ temp <- temp[-1,]
 colnames(temp) <- c("Pscaled","T","Fr")
 spectra_exp <- temp
 
-var <- R24NA_MESH15_Th$gauge_48
-Pscaled <- Mod(4*fft(var)/length(var))
-Fr <- 0:(length(var)-1)/length(var)
-temp <- as.data.frame(Pscaled)
-temp$T <- 0.01/Fr
-temp$Fr <- Fr*100
-temp <- temp[-1,]
-colnames(temp) <- c("Pscaled","T","Fr")
-spectra_V1 <- temp
+i <- 1
+for (case_folder in case_folders){
+  case_folder <- case_folders[1]
+  dat <- eval(parse(text = case_folder))
+  var <- dat$gauge_48
+  Pscaled <- Mod(4*fft(var)/length(var))
+  Fr <- 0:(length(var)-1)/length(var)
+  temp <- as.data.frame(Pscaled)
+  temp$T <- 0.01/Fr
+  temp$Fr <- Fr*100
+  temp <- temp[-1,]
+  colnames(temp) <- c("Pscaled","T","Fr")
+  assign(sprintf("spectra_V%i",i),temp)
+  i <- i + 1
+}
 
-var <- R24NA_MESH15_ThC010$gauge_48
-Pscaled <- Mod(4*fft(var)/length(var))
-Fr <- 0:(length(var)-1)/length(var)
-temp <- as.data.frame(Pscaled)
-temp$T <- 0.01/Fr
-temp$Fr <- Fr*100
-temp <- temp[-1,]
-colnames(temp) <- c("Pscaled","T","Fr")
-spectra_V2 <- temp
+#Plot spectra and water surface elevation-------------------------------------------------------------------------------------------
+ggplot() + geom_line(data = spectra_exp, aes(x=Fr, y=Pscaled, color = "Experimental")) + 
+  geom_line(data = spectra_V1, aes(x=Fr, y=Pscaled, color = "CFL=0.10")) + 
+  geom_line(data = spectra_V2, aes(x=Fr, y=Pscaled, color = "CFL=0.25")) + geom_line(data = spectra_V3, aes(x=Fr, y=Pscaled, color = "CFL=0.50")) +
+  geom_line(data = spectra_V4, aes(x=Fr, y=Pscaled, color = "CFL=0.75")) + geom_line(data = spectra_V5, aes(x=Fr, y=Pscaled, color = "CFL=1.00")) +
+  labs(x = "Fr (Hz)", y = "Pscaled") + labs(color = 'Legend') + scale_color_brewer(palette="RdGy")  +  
+  xlim(0,3) + ggtitle("Water Elevation Spectrum vs Frequency Comparison (33.33 m.)") + xlim(0,3) 
 
-var <- R24NA_MESH15_ThC025$gauge_48
-Pscaled <- Mod(4*fft(var)/length(var))
-Fr <- 0:(length(var)-1)/length(var)
-temp <- as.data.frame(Pscaled)
-temp$T <- 0.01/Fr
-temp$Fr <- Fr*100
-temp <- temp[-1,]
-colnames(temp) <- c("Pscaled","T","Fr")
-spectra_V3 <- temp
-
-var <- R24NA_MESH15_ThC075$gauge_48
-Pscaled <- Mod(4*fft(var)/length(var))
-Fr <- 0:(length(var)-1)/length(var)
-temp <- as.data.frame(Pscaled)
-temp$T <- 0.01/Fr
-temp$Fr <- Fr*100
-temp <- temp[-1,]
-colnames(temp) <- c("Pscaled","T","Fr")
-spectra_V4 <- temp
-
-var <- R24NA_MESH15_ThC1$gauge_48
-Pscaled <- Mod(4*fft(var)/length(var))
-Fr <- 0:(length(var)-1)/length(var)
-temp <- as.data.frame(Pscaled)
-temp$T <- 0.01/Fr
-temp$Fr <- Fr*100
-temp <- temp[-1,]
-colnames(temp) <- c("Pscaled","T","Fr")
-spectra_V5 <- temp
+ggplot() + geom_line(data = BenchCalib, aes(x=Time, y=WG6, color = "Experimental")) + 
+  geom_line(data = R24NA_MESH15_Th, aes(x=Time, y=gauge_48, color = "CFL=0.50")) + 
+  geom_line(data = R24NA_MESH15_ThC010, aes(x=Time, y=gauge_48, color = "CFL=0.10")) + geom_line(data = R24NA_MESH15_ThC025, aes(x=Time, y=gauge_48, color = "CFL=0.25")) +
+  geom_line(data = R24NA_MESH15_ThC075, aes(x=Time, y=gauge_48, color = "CFL=0.75")) + geom_line(data = R24NA_MESH15_ThC1, aes(x=Time, y=gauge_48, color = "CFL=1.00")) +
+  labs(x = "Fr (Hz)", y = "Pscaled") + labs(color = 'Legend') +
+  scale_color_manual(values = c('CFL=0.10' = 'deeppink','CFL=0.25' = 'darkorchid1','CFL=0.50' = 'red',
+                                'CFL=0.75' = 'darkorange1','CFL=1.00' = 'darkgreen','Experimental' = 'black')) +  
+  xlim(40,80) + ggtitle("Water Surface Elevation Comparison (33.33 m.)")

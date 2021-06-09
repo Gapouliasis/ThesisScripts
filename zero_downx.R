@@ -2,7 +2,7 @@ zero_downx <- function(gauge){
   library(data.table)
   SignalLagged <- gauge[1:nrow(gauge)-1,] 
   Signal <- gauge[2:nrow(gauge),]
-  zero_logical <- SignalLagged$Surf >= 0 & Signal$Surf <=0
+  zero_logical <- SignalLagged[,2] >= 0 & Signal[,2] <=0
   zero_ind <- which(zero_logical)
   zero_crossings <- Signal[zero_ind,] 
   
