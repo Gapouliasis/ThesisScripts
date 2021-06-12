@@ -5,6 +5,7 @@ library(ggplot2)
 library(ggpubr)
 library(copula)
 library(POT)
+library(fitdistrplus)
 #Load user defined functions---------------------------------------------------------------------------------------------------------
 cwd <- getwd()
 source(file.path(cwd,"zero_downx.R"))
@@ -17,9 +18,12 @@ gauge_pos <- Meas[c(1,2,3),]
 Meas <- Meas[-c(1,2,3,4),]
 rownames(Meas) <- NULL
 
-# Isolate the individual overtopping events-----------------------------------------------------------------------------------------
+# Isolate the individual waves-----------------------------------------------------------------------------------------
 #Find the zero-down crossings--------------------------------------------------------------------------------------------------------
-gauge <- Meas[,c(1,251)]
+# dat <- Meas[,c(1,251)]
+# names(dat)[2] <- "Surf"
+# out <- zero_downx(dat)
+gauge <- Meas[,c(1,2)]
 names(gauge)[2] <- "Surf"
 #out <- zero_downx(dat) #Requires the first column to be Time and the second surface elevation
 SignalLagged <- gauge[1:nrow(gauge)-1,] 
@@ -58,14 +62,50 @@ waves$surf_min_time <- surf_min_time
 waves$surf_max <- surf_max
 waves$surf_max_time <- surf_max_time
 
+#Plot the zero down crossings-------------------------------------------------------------------------------------------------------
 ggplot() + geom_line(data = gauge, aes(x=Time, y=Surf, color = "Gauge")) + geom_point(data = zero_crossings, aes(x=Time, y=Surf, color = "Crossings"))+
   geom_point(data = waves, aes(x=surf_max_time, y=surf_max, color = "Peak")) +  geom_point(data = waves, aes(x=surf_min_time, y=surf_min, color = "Trough")) +
   scale_color_manual(values = c('Gauge' = 'black', "Crossings" = "orange", "Peak" = "red", "Trough" = "blue")) + ggtitle("Zero Down Crossings")
-
-waves <- out[[1]]
+#fray <- fitdist(waves$height,"weibull")
+#qqcomp(fray)
+#waves <- out[[1]]
 #out[[2]]
 # Clean the record from the noise
 waves <- waves[!(waves$height<0.01),]
+plotdist(waves$height, histo = TRUE, demp = TRUE)
+
+#Isolate the individual overtopping volumes----------------------------------------------------------------------------------------
+#Load the OpenFoam data 
+filename =  file.path("/home/george/OpenFOAM/george-v1912/run",case_folder,"postProcessing/overtopping/0/overtopping.dat")
+tx  <- readLines(filename)
+tx2  <- gsub(pattern = '\\(', replace = " ", x = tx)
+tx3  <- gsub(pattern = '\\)', replace = " ", x = tx2)
+writeLines(tx3, con=filename)
+QMeas = read.table(filename[1],header=FALSE, skip = 1)
+colnames(QMeas) <- c("Time","Qx","Qy","Qz")
+#Transform the instantaneous overtopping discharge to cumulative overtopping volume 
+dat <- QMeas[c(1,2)]
+names(dat)[1] <- "time"
+names(dat)[2] <- "obs"
+a <- clust(dat, u = 0.001, tim.cond = 1, clust.max = TRUE)
+b <- clust(dat, u = 0.001, tim.cond = 1, clust.max = FALSE)
+
+temp_clust <- 0
+nclust <- length(b)
+
+for (j in 1:nclust){
+  temp <- b[[j]][2,]
+  steps <- diff(b[[j]][1,], lag = 1)
+  temp1 <- temp[1:(length(temp)-1)]
+  temp2 <- temp[2:length(temp)]
+  temp <- sum(0.5*(temp1 + temp2)*steps)
+  temp_clust[j] <- temp*1000      #Overtopping volume in liters
+}
+
+Vind <- data.frame("V" = temp_clust)
+Vind$Time <- a[,1]
+plotdist(Vind$V, histo = TRUE, demp = TRUE)
+
 
 
 # Find the time of the overtopping events 
