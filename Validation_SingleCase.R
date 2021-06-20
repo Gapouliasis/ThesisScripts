@@ -10,9 +10,12 @@ library(ggpubr)
 cwd <- getwd()
 source(file.path(cwd,"calc_overtopping.R"))
 #Load data--------------------------------------------------------------------------------------------------------------------------
-case_folder <- "R15NA_MESH15_MULES_C025"
+case_folder <- "R15NA_MESH15_C025"
+#case_folder <- "R32NA_MESH15"
 bench_case <- "20200826_S1_WG_R15NA.ASC"
-# bench_case <- "20200825_S1_WG_R24NA.ASC"
+#bench_case <- "20200825_S1_WG_R24NA.ASC"
+#bench_case <- "20200825_S1_WG_R12NA.ASC"
+#bench_case <- "20200826_S1_WG_R32NA.ASC"
 # case_folder <- "R14NA_MESH11_4"
 # bench_case <- "20200825_S1_WG_R14NA.ASC"
 #Load OpenFoam data
@@ -62,10 +65,12 @@ a <- BenchCalib[1:limit, ]
 b <- Meas[1:round(limit)/20, ]
 
 b$Time2 <- b$Time + 16.4
+#b$Time2 <- b$Time + 16.2
 
-Meas_OCW$Time2 <- Meas_OCW$Time + 16.25
+#Meas_OCW$Time2 <- Meas_OCW$Time + 16.25
+Meas_OCW$Time2 <- Meas_OCW$Time + 16.1
 # Meas_1$Time <- Meas_1$Time + 19.5
-equ_time <- seq(from = 25, to = 70 , by = 0.001)
+equ_time <- seq(from = 25, to = 60 , by = 0.001)
 equ_num <- approx(Meas_OCW$Time2,Meas_OCW$WG5, xout = equ_time) 
 equ_exp <- approx(BenchCalib$Time,BenchCalib$WG5, xout = equ_time)
 
@@ -73,11 +78,11 @@ error <- rmse(equ_exp$y,equ_num$y)
 corr <- cor(equ_exp$y,equ_num$y, method = "pearson")
 
 plot1 <- ggplot() + geom_line(data=a,aes(x=Time, y=WG5, color="Experimental")) + geom_line(data=Meas_OCW,aes(x=Time2, y=WG5, color="Numerical (OCW3D)")) +
-  ggtitle(sprintf("WG5 (17.6 m.) %s", case_folder)) + xlim(25,70) + 
-  annotate("label", x = 27.5, y = 0.145, label = sprintf("atop(RMSE==%1.2f ,rho==%1.2f)",error,corr), parse = TRUE) +
+  ggtitle(sprintf("WG5 (17.6 m.) %s", case_folder)) + xlim(30,60) + 
+  annotate("label", x = 31.5, y = 0.19, label = sprintf("atop(RMSE==%1.2f ,rho==%1.2f)",error,corr), parse = TRUE) +
   scale_color_manual(values = c('Experimental' = 'black','Numerical (OCW3D)' = 'red')) + labs(color = 'Legend')
 
-equ_time <- seq(from = 40, to = 70 , by = 0.001)
+equ_time <- seq(from = 40, to = 75 , by = 0.001)
 equ_num <- approx(b$Time2,b$gauge_48, xout = equ_time) 
 equ_exp <- approx(BenchCalib$Time,BenchCalib$WG6, xout = equ_time)
 
@@ -86,7 +91,7 @@ corr <- cor(equ_exp$y,equ_num$y, method = "pearson")
 
 plot2 <- ggplot() + geom_line(data=a,aes(x=Time, y=WG6, color="Experimental")) + geom_line(data=b,aes(x=Time2, y=gauge_48, color="Numerical (OF)")) + 
   ggtitle(sprintf("WG6 (33.38 m.) %s", case_folder)) +  
-  annotate("label", x = 42, y = 0.17, label = sprintf("atop(RMSE==%1.2f ,rho==%1.2f)",error,corr), parse = TRUE) +
+  annotate("label", x = 41.8, y = 0.175, label = sprintf("atop(RMSE==%1.2f ,rho==%1.2f)",error,corr), parse = TRUE) +
   scale_color_manual(values = c('Experimental' = 'black','Numerical (OF)' = 'red')) + xlim(40,80) + labs(color = 'Legend')
 
 figure <- ggarrange(plot1, plot2, ncol = 1 , nrow = 2)

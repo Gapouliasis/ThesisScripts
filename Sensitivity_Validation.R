@@ -10,7 +10,12 @@ library(POT)
 cwd <- getwd()
 source(file.path(cwd,"calc_overtopping.R"))
 #Load numerical overtopping data for comparison--------------------------------------------------------------------------------------
-case_folders <- c("R24NA_MESH15_Th","R24NA_MESH15_Th_Dt","R24NA_MESH15_Th_Coarse2","R24NA_MESH15_Th_Fine")
+#case_folders <- c("R24NA_MESH15_Th","R24NA_MESH15_Th_Dt","R24NA_MESH15_Th_Coarse2","R24NA_MESH15_Th_Fine")
+#case_folders <- c("R15NA_MESH15","R15NA_MESH15_MULES","R15NA_MESH15_MULES_C025","R15NA_MESH15_MULES_C010")
+#case_folders <- c("R24NA_MESH15_Th_Dt2","R24NA_MESH15_Th_Dt")
+#case_folders <- c("R15NA_MESH15","R15NA_MESH16")
+#case_folders <- c("R24NA_MESH15_Th","R24NA_MESH15_Th3Rd","R24NA_MESH15_Th5Rd")
+case_folders <- c("R24NA_MESH15_Th","R24NA_MESH16_Th","R24NA_MESH17_Th")
 i <- 1
 for (case_folder in case_folders){
   filenames = file.path("/home/george/OpenFOAM/george-v1912/run",case_folder,"postProcessing/overtopping/0/overtopping.dat")
@@ -30,17 +35,19 @@ for (case_folder in case_folders){
   steps <- diff(dat$V1, lag = 1)
   temp1 <- temp[1:(nrow(temp)-1),1]
   temp2 <- temp[2:nrow(temp),1]
-  V <- cumsum(0.5*(temp1 + temp2)*steps)
-  temp1 <- temp[1:(nrow(temp)-1),2]
-  temp2 <- temp[2:nrow(temp),2]
-  V <- abs(cumsum(0.5*(temp1 + temp2)*steps)) + V
+  V <- cumsum(0.5*(temp1 + temp2)*steps)/0.8
+  #temp1 <- temp[1:(nrow(temp)-1),2]
+  #temp2 <- temp[2:nrow(temp),2]
+  #V <- abs(cumsum(0.5*(temp1 + temp2)*steps)) + V
   Time <- dat[2:nrow(dat),1] + 36.5
+  #Time <- dat[2:nrow(dat),1] + 18.5
   assign(sprintf("V%i",i), as.data.frame(cbind(V,Time)))
   i <- i + 1
 }
 
 #Load the experimental wave gauge data---------------------------------------------------------------------------------------------
 benchfile = "/home/george/Thesis/tsosMi/Shape 1/20200825_S1_WG_R24NA.ASC"
+#benchfile = "/home/george/Thesis/tsosMi/Shape 1/20200826_S1_WG_R15NA.ASC"
 BenchRaw = read.table(benchfile,header = TRUE, sep = ";", skip = 6)
 expmeas <-BenchRaw[,c(1,2,3,4,5,6,7,10)]
 rm(BenchRaw)
@@ -85,14 +92,42 @@ names(der)[1]<- "der"
 
 #Plot the comparison of experimental and numerical overtopping volumes--------------------------------------------------------------
 imark <- floor(seq(from=1,to=dim(V1)[1],length=100))
-ggplot() + geom_line( data = V, aes(x=Time, y=V, color = "Experimental")) + 
-  #geom_point(data = V1[imark,], aes(x=Time, y=V, color = "CFL=0.50")) +
-  geom_line(data = V2, aes(x=Time, y=V, color = "Coarse")) + geom_line(data = V3, aes(x=Time, y=V, color = "Coarse2")) + 
-  geom_line(data = V4, aes(x=Time, y=V, color = "Fine")) + geom_line(data = V1, aes(x=Time, y=V, color = "Base")) +
-  scale_color_manual(values = c('Base' = 'red','Coarse' = 'blue','Coarse2' = 'chartreuse4',
-                                'Fine' = 'darkorange1','Experimental' = 'black')) +
-   ggtitle("Cumulative Overtopping Comparison") + ylim(0,0.012) +xlim(50,100)
+# ggplot() + geom_line( data = V, aes(x=Time, y=V, color = "Experimental")) + 
+#   #geom_point(data = V1[imark,], aes(x=Time, y=V, color = "CFL=0.50")) +
+#   geom_line(data = V2, aes(x=Time, y=V, color = "Coarse")) + geom_line(data = V3, aes(x=Time, y=V, color = "Coarse2")) + 
+#   geom_line(data = V4, aes(x=Time, y=V, color = "Fine")) + geom_line(data = V1, aes(x=Time, y=V, color = "Base")) +
+#   scale_color_manual(values = c('Base' = 'red','Coarse' = 'blue','Coarse2' = 'chartreuse4',
+#                                 'Fine' = 'darkorange1','Experimental' = 'black')) +
+#    ggtitle("Cumulative Overtopping Comparison") + ylim(0,0.012) +xlim(50,100)
   
+# ggplot() + geom_line( data = V, aes(x=Time, y=V, color = "Experimental")) + 
+#   geom_line(data = V1, aes(x=Time, y=V, color = "isoAdvector")) + geom_line(data = V2, aes(x=Time, y=V, color = "MULES")) + 
+#   scale_color_manual(values = c('Experimental' = 'black','isoAdvector' = 'red','MULES' = 'blue')) +
+#   ggtitle("Cumulative Overtopping Comparison for R15NA") + labs(color = 'Legend')
+
+# ggplot() + geom_line( data = V, aes(x=Time, y=V, color = "Experimental")) +
+#   geom_line(data = V1, aes(x=Time, y=V, color = "isoAdvector")) + geom_line(data = V2, aes(x=Time, y=V, color = "MULES (CFL=0.50)")) +
+#   geom_line(data = V3, aes(x=Time, y=V, color = "MULES (CFL=0.25)")) +  geom_line(data = V4, aes(x=Time, y=V, color = "MULES (CFL=0.10)")) +
+#   scale_color_manual(values = c('Experimental' = 'black','isoAdvector' = 'red','MULES (CFL=0.50)' = 'blue','MULES (CFL=0.25)' = 'orange',
+#                                 'MULES (CFL=0.10)' = 'green')) +
+#   ggtitle("Cumulative Overtopping Comparison for R15NA") + labs(color = 'Legend')
+
+# ggplot() + geom_line( data = V, aes(x=Time, y=V, color = "Experimental")) +
+#   geom_line(data = V1, aes(x=Time, y=V, color = "Dt=0.00025")) + geom_line(data = V2, aes(x=Time, y=V, color = "Dt=0.01")) +
+#   scale_color_manual(values = c('Experimental' = 'black','Dt=0.00025' = 'red','Dt=0.01' = 'blue')) +
+#   ggtitle("Cumulative Overtopping Comparison for R24NA") + labs(color = 'Legend') #+ ylim(0,0.012) +xlim(50,100)
+
+# ggplot() + geom_line( data = V, aes(x=Time, y=V, color = "Experimental")) +
+#   geom_line(data = V1, aes(x=Time, y=V, color = "1st Order (Base)")) + geom_line(data = V2, aes(x=Time, y=V, color = "3rd Order")) +
+#   geom_line(data = V3, aes(x=Time, y=V, color = "5th Order")) +
+#   scale_color_manual(values = c('Experimental' = 'black','1st Order (Base)' = 'red','3rd Order' = 'blue','5th Order' = 'orange')) +
+#   ggtitle("Cumulative Overtopping Comparison for R24NA") + labs(color = 'Legend') + ylim(0,0.011) + xlim(50,100)
+
+ggplot() + geom_line( data = V, aes(x=Time, y=V, color = "Experimental")) +
+  geom_line(data = V1, aes(x=Time, y=V, color = "1st Order (Base)")) + geom_line(data = V2, aes(x=Time, y=V, color = "3rd Order")) +
+  geom_line(data = V3, aes(x=Time, y=V, color = "5th Order")) +
+  scale_color_manual(values = c('Experimental' = 'black','1st Order (Base)' = 'red','3rd Order' = 'blue','5th Order' = 'orange')) +
+  ggtitle("Cumulative Overtopping Comparison for R24NA") + labs(color = 'Legend') + ylim(0,0.011) + xlim(50,100)
 
 #Calculate and plot relative error of individual overtopping volume----------------------------------------------------------------
 i <- 1
@@ -102,42 +137,43 @@ for (case_folder in case_folders){
   names(dat)[1] <- "time"
   names(dat)[2] <- "obs"
   b <- clust(dat, u = 0.001, tim.cond = 1, clust.max = FALSE)
-  
+
   temp_clust <- 0
   nclust <- length(b)
-  
+
   for (j in 1:nclust){
     temp <- b[[j]][2,]
     steps <- diff(b[[j]][1,], lag = 1)
     temp1 <- temp[1:(length(temp)-1)]
     temp2 <- temp[2:length(temp)]
-    temp <- sum(0.5*(temp1 + temp2)*steps)
+    temp <- sum(0.5*(temp1 + temp2)*steps)/0.8
     temp_clust[j] <- temp
   }
-  
+
   if (i == 1){
-    temp <- zeros(23,1)
+    temp <- zeros(12,1)
     VClust <- data.frame(temp)
     colnames(VClust) <- "V1"
   }
-  
+
   VClust[sprintf("V%i",i)] <- as.data.frame(temp_clust)
   i <- i + 1
 }
 
 V12<- abs((VClust$V1 - VClust$V2)/VClust$V1)*100
 V13 <- abs((VClust$V1 - VClust$V3)/VClust$V1)*100
-V14 <- abs((VClust$V1 - VClust$V4)/VClust$V1)*100
+#V14 <- abs((VClust$V1 - VClust$V4)/VClust$V1)*100
 
-Ver <- as.data.frame(cbind(V12,V13,V14)) 
+#Ver <- as.data.frame(cbind(V12,V13,V14))
+Ver <- as.data.frame(V12)
 
 mer <- melt(Ver)
 names(mer)[1] <- "Case"
 
-ggplot(mer, aes(Case,value, fill = Case)) +  geom_boxplot() + geom_jitter(position=position_jitter(0.2)) + 
-  labs(x = "Case", y = "Relative Error %") + ggtitle("Relative Error of individual overtopping volume compared to CFL010")
-#+ scale_fill_brewer(palette="Dark2") 
-
+ggplot(mer, aes(Case,value, fill = Case)) +  geom_boxplot() + geom_jitter(position=position_jitter(0.2)) +
+  labs(x = "Case", y = "Relative Error %") + ggtitle("Relative Error of individual overtopping volume compared to 1st Order (Base Case)")
+#+ scale_fill_brewer(palette="Dark2")
+# 
 #Load the wave gauge data---------------------------------------------------------------------------------------------------------
 for (case_folder in case_folders){
   filenames = file.path("/home/george/OpenFOAM/george-v1912/run",case_folder,"postProcessing/surfaceElevation/0/surfaceElevation.dat")
@@ -148,10 +184,14 @@ for (case_folder in case_folders){
   assign(case_folder,read.table(filenames[1],header=TRUE))
 }
 
-R24NA_MESH15_Th <- R24NA_MESH15_Th[-c(1,2,3,4),]    
-R24NA_MESH15_Th_2 <- R24NA_MESH15_Th_2[-c(1,2,3,4),] 
-R24NA_MESH15_Th_3 <- R24NA_MESH15_Th_3[-c(1,2,3,4),] 
-R24NA_MESH15_Th_4 <- R24NA_MESH15_Th_4[-c(1,2,3,4),] 
+R15NA_MESH15 <- R15NA_MESH15[-c(1,2,3,4),]
+R15NA_MESH15$Time2 <- R15NA_MESH15$Time + 16.4
+R15NA_MESH16 <- R15NA_MESH16[-c(1,2,3,4),]
+R15NA_MESH16$Time2 <- R15NA_MESH16$Time + 16.4
+# R24NA_MESH15_Th <- R24NA_MESH15_Th[-c(1,2,3,4),]
+# R24NA_MESH15_Th_2 <- R24NA_MESH15_Th_2[-c(1,2,3,4),]
+# R24NA_MESH15_Th_3 <- R24NA_MESH15_Th_3[-c(1,2,3,4),]
+# R24NA_MESH15_Th_4 <- R24NA_MESH15_Th_4[-c(1,2,3,4),]
 
 #Calculate experimental and numerical spectra--------------------------------------------------------------------------------------
 var <- BenchCalib$WG6
@@ -181,19 +221,32 @@ for (case_folder in case_folders){
 }
 
 #Plot spectra and water surface elevation------------------------------------------------------------------------------------------
-ggplot() + geom_line(data = spectra_exp, aes(x=Fr, y=Pscaled, color = "Experimental")) + 
-  geom_line(data = spectra_V1, aes(x=Fr, y=Pscaled, color = "V1")) + 
-  geom_line(data = spectra_V2, aes(x=Fr, y=Pscaled, color = "V2")) + geom_line(data = spectra_V3, aes(x=Fr, y=Pscaled, color = "V3")) +
-  geom_line(data = spectra_V4, aes(x=Fr, y=Pscaled, color = "V4")) +
-  labs(x = "Fr (Hz)", y = "Pscaled") + labs(color = 'Legend') + scale_color_brewer(palette="RdGy")  +  
-  xlim(0,3) + ggtitle("Water Elevation Spectrum vs Frequency Comparison (33.33 m.)") + xlim(0,3) 
+# ggplot() + geom_line(data = spectra_exp, aes(x=Fr, y=Pscaled, color = "Experimental")) +
+#   geom_line(data = spectra_V1, aes(x=Fr, y=Pscaled, color = "V1")) +
+#   geom_line(data = spectra_V2, aes(x=Fr, y=Pscaled, color = "V2")) + geom_line(data = spectra_V3, aes(x=Fr, y=Pscaled, color = "V3")) +
+#   geom_line(data = spectra_V4, aes(x=Fr, y=Pscaled, color = "V4")) +
+#   labs(x = "Fr (Hz)", y = "Pscaled") + labs(color = 'Legend') + scale_color_brewer(palette="RdGy")  +
+#   xlim(0,3) + ggtitle("Water Elevation Spectrum vs Frequency Comparison (33.33 m.)") + xlim(0,3)
 
-ggplot() + geom_line(data = BenchCalib, aes(x=Time, y=WG6, color = "Experimental")) + 
-  geom_line(data = R24NA_MESH15_Th, aes(x=Time, y=gauge_48, color = "V1")) + 
-  geom_line(data = R24NA_MESH15_Th_2, aes(x=Time, y=gauge_48, color = "V2")) + geom_line(data = R24NA_MESH15_Th_3, aes(x=Time, y=gauge_48, color = "V3")) +
-  geom_line(data = R24NA_MESH15_Th_4, aes(x=Time, y=gauge_48, color = "V4")) +
-  labs(x = "Fr (Hz)", y = "Pscaled") + labs(color = 'Legend') +
-  scale_color_manual(values = c('V1' = 'deeppink','V2' = 'darkorchid1','V3' = 'red',
-                                'V4' = 'darkorange1','Experimental' = 'black'))  +  
+# ggplot() + geom_line(data = BenchCalib, aes(x=Time, y=WG6, color = "Experimental")) +
+#   geom_line(data = R24NA_MESH15_Th, aes(x=Time, y=gauge_48, color = "V1")) +
+#   geom_line(data = R24NA_MESH15_Th_2, aes(x=Time, y=gauge_48, color = "V2")) + geom_line(data = R24NA_MESH15_Th_3, aes(x=Time, y=gauge_48, color = "V3")) +
+#   geom_line(data = R24NA_MESH15_Th_4, aes(x=Time, y=gauge_48, color = "V4")) +
+#   labs(x = "Fr (Hz)", y = "Pscaled") + labs(color = 'Legend') +
+#   scale_color_manual(values = c('V1' = 'deeppink','V2' = 'darkorchid1','V3' = 'red',
+#                                 'V4' = 'darkorange1','Experimental' = 'black'))  +
+#   xlim(40,80) + ggtitle("Water Surface Elevation Comparison (33.33 m.)")
+
+# ggplot() + geom_line(data = spectra_exp, aes(x=Fr, y=Pscaled, color = "Experimental")) +
+#   geom_line(data = spectra_V1, aes(x=Fr, y=Pscaled, color = "V1")) +
+#   geom_line(data = spectra_V2, aes(x=Fr, y=Pscaled, color = "V2")) + 
+#   labs(x = "Fr (Hz)", y = "Pscaled") + labs(color = 'Legend') + scale_color_brewer(palette="RdGy")  +
+#   xlim(0,3) + ggtitle("Water Elevation Spectrum vs Frequency Comparison (33.33 m.)") + xlim(0,3)
+
+ggplot() + geom_line(data = BenchCalib, aes(x=Time, y=WG6, color = "Experimental")) +
+  geom_line(data = R15NA_MESH15, aes(x=Time2, y=gauge_48, color = "isoAdvector")) +
+  geom_line(data = R15NA_MESH16, aes(x=Time2, y=gauge_48, color = "MULES")) +
+  labs(x = "X (m.)", y = "Water Elevation (m.)") + labs(color = 'Legend') +
+  scale_color_manual(values = c('Experimental' = 'black','isoAdvector' = 'red','MULES' = 'blue'))  +
   xlim(40,80) + ggtitle("Water Surface Elevation Comparison (33.33 m.)")
 
